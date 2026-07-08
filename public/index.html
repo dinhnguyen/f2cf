@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>F2CF - Framer to Cloudflare</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>F2CF <span style="font-weight:400;font-size:13px;opacity:.55">Framer to Cloudflare</span></h1>
+    <div id="auth" class="auth">…</div>
+  </header>
+  <section class="add">
+    <input id="framerUrl" placeholder="https://tensite.framer.website/">
+    <input id="projectName" placeholder="cloudflare project (tùy chọn)">
+    <button id="addBtn">+ Thêm site</button>
+  </section>
+  <table id="sites">
+    <thead><tr><th>Site</th><th>Trạng thái</th><th>Sync</th><th>Publish</th><th>Hành động</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <pre id="log" class="log" hidden></pre>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "f2cf",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "bin": { "f2cf": "./cli.mjs" },
+  "scripts": {
+    "test": "node --test",
+    "start": "node server.mjs"
+  }
+}

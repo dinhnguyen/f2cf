@@ -1,0 +1,40 @@
+:root { color-scheme: light dark; }
+* { box-sizing: border-box; }
+body { font: 14px/1.5 system-ui, sans-serif; margin: 0; padding: 24px; max-width: 1000px; margin-inline: auto; }
+header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+h1 { font-size: 20px; margin: 0; }
+.auth { font-size: 12px; padding: 4px 10px; border-radius: 99px; border: 1px solid; }
+.auth.ok { color: #2e7d55; } .auth.bad { color: #b3402e; }
+.add { display: flex; gap: 8px; margin-bottom: 16px; }
+.add input { flex: 1; padding: 6px 10px; border: 1px solid #8884; border-radius: 6px; background: transparent; color: inherit; }
+.add button, .actions button { padding: 6px 10px; border: 1px solid #8886; border-radius: 6px; background: transparent; color: inherit; cursor: pointer; }
+.add button { border-color: #3fae7f; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 11px; text-transform: uppercase; opacity: .55; padding: 8px; border-bottom: 1px solid #8884; }
+td { padding: 10px 8px; border-bottom: 1px solid #8882; vertical-align: middle; }
+.url a { color: #4a90ff; text-decoration: none; font-size: 12px; }
+.src, .muted { opacity: .6; font-size: 12px; }
+.actions { display: flex; gap: 4px; flex-wrap: wrap; }
+.actions button[disabled] { opacity: .4; cursor: default; }
+.badge { display: inline-block; white-space: nowrap; font-size: 11px; padding: 2px 8px; border-radius: 99px; border: 1px solid; }
+.badge.ok { color: #2e7d55; } .badge.upd { color: #b98f2e; } .badge.new { opacity: .6; }
+.badge.run { color: #4a90ff; } .badge.err { color: #b3402e; }
+.log { margin-top: 16px; padding: 12px; background: #0002; border-radius: 8px; font: 11px/1.5 monospace; max-height: 240px; overflow: auto; white-space: pre-wrap; }
+.url a, .src { overflow-wrap: anywhere; }
+
+/* Mobile: the 5-column table overflows and hides the action buttons, so collapse each
+   row into a stacked card and stack the add-site form. */
+@media (max-width: 768px) {
+  body { padding: 16px; }
+  header { flex-wrap: wrap; gap: 8px; }
+  .add { flex-direction: column; }
+  .add input, .add button { width: 100%; }
+
+  table, tbody, tr, td { display: block; width: 100%; }
+  thead { display: none; }
+  tr { border: 1px solid #8884; border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+  td { border: none; padding: 3px 0; }
+  td[data-label]::before { content: attr(data-label) ": "; font-size: 11px; text-transform: uppercase; opacity: .55; margin-right: 4px; }
+  td.actions { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 10px; }
+  td.actions button { flex: 1; min-width: 84px; }
+}

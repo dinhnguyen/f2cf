@@ -1,0 +1,7 @@
+node_modules/
+registry.json
+sites/
+.superpowers/
+docs/superpowers/
+.DS_Store
+.wrangler/
