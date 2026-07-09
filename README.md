@@ -1,165 +1,167 @@
+English | [Tiếng Việt](README.vi.md)
+
 # F2CF (Framer to Cloudflare)
 
-Công cụ chạy trên máy của bạn để quản lý nhiều website Framer: sao chép (clone) site về, kiểm tra khi Framer có bản mới, xem thử, và đăng (publish) lên Cloudflare Pages - tất cả qua một trang dashboard trong trình duyệt.
+A tool that runs on your own machine to manage multiple Framer websites: clone a site, detect when Framer has a newer version, preview it, and publish it to Cloudflare Pages - all from a dashboard in your browser.
 
-Hướng dẫn này viết cho người chưa biết gì. Làm lần lượt từng bước là chạy được.
-
----
-
-## 1. Nó dùng để làm gì
-
-Bạn thiết kế website trên Framer. Framer cho bạn một địa chỉ dạng `https://tên.framer.website/`. F2CF giúp bạn:
-
-- Tải toàn bộ site đó về máy.
-- Đưa site lên Cloudflare Pages (hosting miễn phí, nhanh) dưới địa chỉ `https://tên.pages.dev`.
-- Khi bạn sửa lại trên Framer, bấm một nút để cập nhật bản trên Cloudflare.
-- Tự động gỡ mã theo dõi (tracking) và ẩn logo "Made in Framer".
-
-Nguồn gốc nội dung luôn là Framer. Bạn sửa trên Framer, rồi đồng bộ về và đăng lại. Công cụ này không sửa nội dung.
+This guide assumes no prior knowledge. Follow the steps in order and it will work.
 
 ---
 
-## 2. Chuẩn bị (cài một lần)
+## 1. What it is for
 
-### 2.1. Cài Node.js
+You design a website in Framer. Framer gives you an address like `https://yoursite.framer.website/`. F2CF lets you:
 
-Đây là phần mềm để chạy công cụ. Cần bản 18 trở lên.
+- Download the entire site to your machine.
+- Put it on Cloudflare Pages (free, fast hosting) at `https://yoursite.pages.dev`.
+- When you edit the site in Framer, click one button to update the Cloudflare copy.
+- Automatically strip tracking code and hide the "Made in Framer" badge.
 
-- Vào https://nodejs.org, tải bản "LTS", cài như phần mềm bình thường.
-- Kiểm tra: mở Terminal (trên Mac: bấm `Cmd + dấu cách`, gõ "Terminal", Enter) rồi gõ:
+Framer stays the source of truth. You edit in Framer, then sync and republish. This tool never edits content.
+
+---
+
+## 2. Setup (one time)
+
+### 2.1. Install Node.js
+
+This is the software that runs the tool. Version 18 or newer is required.
+
+- Go to https://nodejs.org, download the "LTS" build, install it like any normal application.
+- Verify: open Terminal (on Mac: press `Cmd + Space`, type "Terminal", Enter) and run:
 
 ```bash
 node --version
 ```
 
-Nếu hiện ra số kiểu `v20.x.x` hoặc cao hơn là được. Nếu báo "command not found" thì Node chưa cài xong.
+A number like `v20.x.x` or higher means you are good. "command not found" means Node is not installed yet.
 
-Công cụ này không cần cài thêm thư viện nào khác (`npm install` không bắt buộc). Chỉ cần Node.
+Then run `npm install` once inside the tool folder to install its libraries (including `playwright`, used by the automatic discovery step).
 
-### 2.2. Có một tài khoản Cloudflare
+### 2.2. Have a Cloudflare account
 
-Miễn phí. Đăng ký tại https://dash.cloudflare.com/sign-up nếu chưa có.
+Free. Sign up at https://dash.cloudflare.com/sign-up if you do not have one.
 
-### 2.3. Đăng nhập Cloudflare trên máy
+### 2.3. Log in to Cloudflare on this machine
 
-Mở Terminal, đi vào thư mục công cụ rồi đăng nhập.
+Open Terminal, go into the tool folder, and log in.
 
-Lưu ý: `đường-dẫn/tới/f2cf` là chỗ giữ chỗ - thay bằng đường dẫn thật tới thư mục `f2cf` trên máy bạn (nơi bạn giải nén / lưu nó). Mẹo trên Mac: gõ `cd ` (có dấu cách ở cuối), rồi kéo thả thư mục `f2cf` từ Finder vào cửa sổ Terminal - nó tự điền đường dẫn đúng, xong bấm Enter.
+Note: `path/to/f2cf` is a placeholder - replace it with the real path to the `f2cf` folder on your machine (wherever you unzipped / saved it). Mac tip: type `cd ` (with a trailing space), then drag the `f2cf` folder from Finder into the Terminal window - it fills in the correct path; press Enter.
 
 ```bash
-cd đường-dẫn/tới/f2cf
+cd path/to/f2cf
 npx wrangler login
 ```
 
-- Lần đầu chạy `npx wrangler` nó sẽ tự tải công cụ Cloudflare về (chờ một chút).
-- Trình duyệt sẽ mở ra, bấm "Allow" để cho phép.
-- Thấy dòng "Successfully logged in" là xong.
+- The first `npx wrangler` run downloads the Cloudflare tool automatically (give it a moment).
+- A browser window opens; click "Allow".
+- "Successfully logged in" means you are done.
 
-Kiểm tra đã đăng nhập đúng chưa:
+Verify the login:
 
 ```bash
 npx wrangler whoami
 ```
 
-Nó hiện email và tên tài khoản của bạn.
+It prints your email and account name.
 
 ---
 
-## 3. Khởi động dashboard
+## 3. Start the dashboard
 
-Mỗi lần muốn dùng, mở Terminal và chạy:
+Each time you want to use the tool, open Terminal and run:
 
 ```bash
-cd đường-dẫn/tới/f2cf
+cd path/to/f2cf
 npm start
 ```
 
-Thấy dòng:
+When you see:
 
 ```
 F2CF: http://127.0.0.1:4599
 ```
 
-Mở trình duyệt, vào địa chỉ **http://127.0.0.1:4599**
+open your browser at **http://127.0.0.1:4599**
 
-Cứ để cửa sổ Terminal đó chạy. Muốn tắt công cụ thì quay lại Terminal bấm `Ctrl + C`.
+Leave that Terminal window running. To stop the tool, go back to Terminal and press `Ctrl + C`.
 
-Ghi chú: lúc mới mở, dashboard có thể trống khoảng 1-3 giây (đang kiểm tra đăng nhập Cloudflare) rồi mới hiện danh sách. Bình thường.
-
----
-
-## 4. Dùng dashboard
-
-Trên cùng là ô đăng nhập Cloudflare (dấu tích xanh + email nếu đã đăng nhập), ô thêm site, và bảng danh sách các site.
-
-### 4.1. Thêm một site mới
-
-1. Dán địa chỉ Framer vào ô đầu (ví dụ `https://tensite.framer.website/`).
-2. Ô thứ hai "cloudflare project" để trống cũng được - nó tự đặt tên theo địa chỉ. Muốn tên khác thì gõ vào.
-3. Bấm **+ Thêm site**.
-
-Công cụ sẽ tạo project trên Cloudflare (nếu chưa có), tải site về, và hiện nó trong bảng. Khu vực log phía dưới chạy chữ cho biết tiến trình.
-
-### 4.2. Các nút trên mỗi site
-
-| Nút | Việc nó làm |
-|-----|-------------|
-| **Check** | Hỏi Framer xem site đã đổi chưa. Nếu đổi, nhãn chuyển thành "có bản mới". |
-| **Sync** | Tải lại bản mới nhất từ Framer về máy (chưa đăng lên mạng). |
-| **Preview** | Mở một tab mới xem thử bản đã tải về (chạy trên máy bạn). Phải Sync trước thì mới có gì để xem. |
-| **Publish** | Đăng bản đã tải lên Cloudflare Pages. Sau bước này địa chỉ `.pages.dev` mới cập nhật. |
-| **✕** | Xoá site khỏi danh sách và xoá bản tải về trên máy. KHÔNG xoá project bên Cloudflare. |
-
-### 4.3. Quy trình thường dùng
-
-1. Sửa nội dung trên Framer, bấm Publish bên Framer.
-2. Về dashboard bấm **Check** - thấy "có bản mới".
-3. Bấm **Sync** để tải bản mới về.
-4. Bấm **Preview** xem lại cho chắc.
-5. Bấm **Publish** để đưa lên mạng.
-
-Nhãn trạng thái:
-
-- **chưa sync**: mới thêm, chưa tải về.
-- **up to date**: bản trên máy khớp với Framer.
-- **có bản mới**: Framer đã đổi, nên Sync lại.
-
-Nút **Publish** bị mờ (không bấm được) nếu bạn chưa đăng nhập Cloudflare. Chạy lại `npx wrangler login` là bấm được.
+Note: right after opening, the dashboard may be empty for 1-3 seconds (it is checking the Cloudflare login) before the list appears. That is normal.
 
 ---
 
-## 5. Cách dùng bằng dòng lệnh (không bắt buộc)
+## 4. Using the dashboard
 
-Nếu chỉ muốn tải nhanh một site ra thư mục mà không cần dashboard:
+At the top: the Cloudflare login status (green check + email when logged in), the add-site form, and the table of sites.
+
+### 4.1. Add a new site
+
+1. Paste the Framer address into the first field (e.g. `https://yoursite.framer.website/`).
+2. The second field, "cloudflare project", can be left empty - a name is derived from the address. Type one if you want a different name.
+3. Click **+ Add site**.
+
+The tool creates the Cloudflare project (if needed), downloads the site, and shows it in the table. The log area below reports progress.
+
+### 4.2. Buttons on each site
+
+| Button | What it does |
+|--------|--------------|
+| **Check** | Asks Framer whether the site changed. If so, the label switches to "update available". |
+| **Sync** | Downloads the latest version from Framer to your machine (nothing goes online yet). |
+| **Preview** | Opens a new tab with the downloaded copy (served from your machine). Sync first, or there is nothing to show. |
+| **Publish** | Deploys the downloaded copy to Cloudflare Pages. Only after this does the `.pages.dev` address update. |
+| **✕** | Removes the site from the list and deletes the local copy. Does NOT delete the Cloudflare project. |
+
+### 4.3. Typical workflow
+
+1. Edit content in Framer, hit Publish on Framer's side.
+2. In the dashboard click **Check** - you see "update available".
+3. Click **Sync** to download the new version.
+4. Click **Preview** to double-check.
+5. Click **Publish** to put it online.
+
+Status labels:
+
+- **not synced**: just added, nothing downloaded yet.
+- **up to date**: the local copy matches Framer.
+- **update available**: Framer changed; you should Sync.
+
+The **Publish** button is disabled if you are not logged in to Cloudflare. Run `npx wrangler login` again and it becomes clickable.
+
+---
+
+## 5. Command-line usage (optional)
+
+To quickly download one site into a folder without the dashboard:
 
 ```bash
-node cli.mjs --from-url https://tensite.framer.website/ --out thu-muc-dich
+node cli.mjs --from-url https://yoursite.framer.website/ --out target-folder
 ```
 
-Các tuỳ chọn thêm:
+Options:
 
-| Cờ | Ý nghĩa |
-|----|---------|
-| `--out <thư mục>` | Nơi lưu kết quả (mặc định `dist`). |
-| `--origin <url>` | Địa chỉ site sẽ được deploy (ví dụ `https://tensite.pages.dev`). Có cờ này thì tải về **toàn bộ** font, ảnh, module, dữ liệu CMS - site không còn gọi về máy chủ Framer nữa. |
-| `--keep-cdn` | Không tải asset về, để load từ CDN Framer. |
-| `--keep-tracking` | Giữ mã theo dõi và thanh editor của Framer. |
-| `--keep-badge` | Giữ logo "Made in Framer". |
+| Flag | Meaning |
+|------|---------|
+| `--out <folder>` | Where to write the result (default `dist`). |
+| `--origin <url>` | The address the site will be deployed at (e.g. `https://yoursite.pages.dev`). With this flag, **everything** is downloaded - fonts, images, modules, CMS data - and the site no longer calls Framer's servers. |
+| `--keep-cdn` | Do not download assets; keep loading them from Framer's CDN. |
+| `--keep-tracking` | Keep Framer's tracking code and editor bar. |
+| `--keep-badge` | Keep the "Made in Framer" badge. |
 
-Mặc định (không thêm cờ) là bản sạch: gỡ tracking, ẩn badge, tải ảnh trong HTML về. Dashboard luôn dùng chế độ `--origin` (tự lấy địa chỉ `*.pages.dev` của project) nên site tải qua dashboard là bản tách hoàn toàn khỏi Framer.
+The default (no flags) is a clean build: tracking removed, badge hidden, HTML-referenced images downloaded. The dashboard always uses `--origin` mode (it derives the project's `*.pages.dev` address), so sites cloned through the dashboard are fully detached from Framer.
 
 ---
 
-## 6. Dữ liệu lưu ở đâu
+## 6. Where data is stored
 
-Nằm trong thư mục `f2cf`:
+Inside the `f2cf` folder:
 
-- `registry.json` - danh sách các site bạn quản lý (địa chỉ, tên project, thời gian sync/publish).
-- `sites/<tên>/dist/` - bản site đã tải về của từng site.
+- `registry.json` - the list of sites you manage (address, project name, sync/publish timestamps).
+- `sites/<name>/dist/` - the downloaded copy of each site.
 
-Hai thứ này chỉ nằm trên máy bạn, không đưa lên git. Xoá `registry.json` là mất danh sách (nhưng site trên Cloudflare vẫn còn).
+Both stay on your machine only and are not committed to git. Deleting `registry.json` loses the list (the sites on Cloudflare remain).
 
-Muốn nạp sẵn một site mẫu để thử (sửa danh sách site trong `seed.mjs`):
+To seed a sample site for a quick try (edit the list in `seed.mjs`):
 
 ```bash
 node seed.mjs
@@ -167,29 +169,29 @@ node seed.mjs
 
 ---
 
-## 7. Điều quan trọng cần biết
+## 7. Important things to know
 
-- **Site được tách hoàn toàn khỏi hạ tầng Framer.** Font, ảnh, module JS, icon và dữ liệu CMS đều được tải về và phục vụ từ Cloudflare; thanh editor của Framer (vốn gọi về `framer.com` với mọi khách truy cập) bị vô hiệu. Còn lại trên máy chủ ngoài chỉ có Google Fonts (giữ nguyên vì CDN Google nhanh) và các embed bên thứ ba như Google Maps, YouTube - những thứ này là dịch vụ chạy trực tiếp, không tải về được.
-- **Ảnh phục vụ ở kích thước gốc.** CDN Framer có tính năng resize ảnh theo tham số (`?width=...`); bản tự host trả đúng file gốc cho mọi kích thước nên trang có thể nặng hơn chút trên màn hình nhỏ.
-- **Cần cài `playwright`** (đã nằm trong `package.json`, `npm install` là đủ) để bước dò quét tự động tìm các file mà site chỉ nạp lúc chạy (icon, dữ liệu CMS). Thiếu nó công cụ vẫn chạy nhưng vài icon/section động có thể bị thiếu.
-- **Mỗi lần chỉ tải một trang** - đúng trang ở địa chỉ bạn đưa. Chưa tự đi theo các trang con.
-- **Một chiều Framer -> máy.** Đừng sửa file đã tải về; sửa trên Framer rồi Sync lại.
-- Công cụ chỉ chạy nội bộ (`127.0.0.1`), người ngoài mạng không vào được dashboard của bạn.
+- **Sites are fully detached from Framer's infrastructure.** Fonts, images, JS modules, icons and CMS data are all downloaded and served from Cloudflare; Framer's editor bar (which pings `framer.com` for every visitor) is disabled. The only remaining external servers are Google Fonts (kept on purpose - Google's CDN is fast) and third-party embeds such as Google Maps or YouTube - those are live services and cannot be downloaded.
+- **Images are served at original size.** Framer's CDN resizes images via query parameters (`?width=...`); the self-hosted copy returns the original file for every size, so pages can be slightly heavier on small screens.
+- **`playwright` is required** (already in `package.json`; `npm install` is enough) for the discovery step that finds files the site only loads at runtime (icons, CMS data). Without it the tool still works, but some icons/dynamic sections may be missing.
+- **One page per clone** - exactly the page at the address you give. It does not follow subpages yet.
+- **One-way Framer -> machine.** Do not edit downloaded files; edit in Framer and Sync again.
+- The tool binds to `127.0.0.1` only; nobody outside your machine can reach your dashboard.
 
 ---
 
-## 8. Gặp sự cố
+## 8. Troubleshooting
 
-| Hiện tượng | Cách xử lý |
-|-----------|-----------|
-| `node: command not found` | Chưa cài Node.js (mục 2.1). |
-| Dashboard không mở được | Kiểm tra Terminal còn chạy `npm start` không; đúng địa chỉ `http://127.0.0.1:4599`. |
-| Nút Publish mờ | Chưa đăng nhập Cloudflare. Chạy `npx wrangler login`. |
-| Preview báo trắng / lỗi | Bấm **Sync** cho site đó trước, rồi Preview lại. |
-| Cổng 4599 đang bận | Chạy `PORT=4600 npm start` rồi vào `http://127.0.0.1:4600`. |
-| Site tải về bị lỗi vài ảnh | Bình thường nếu Framer chặn tạm; công cụ tự thử lại. Ảnh lỗi vẫn để trên CDN Framer, site vẫn chạy. |
+| Symptom | Fix |
+|---------|-----|
+| `node: command not found` | Node.js is not installed (section 2.1). |
+| Dashboard does not open | Check the Terminal is still running `npm start`; the address is `http://127.0.0.1:4599`. |
+| Publish button disabled | Not logged in to Cloudflare. Run `npx wrangler login`. |
+| Preview blank / broken | Click **Sync** for that site first, then Preview again. |
+| Port 4599 busy | Run `PORT=4600 npm start` and open `http://127.0.0.1:4600`. |
+| A few images fail during clone | Normal if Framer throttles temporarily; the tool retries. Failed images keep loading from Framer's CDN and the site still works. |
 
-Muốn kiểm tra công cụ còn hoạt động đúng:
+To verify the tool itself still works:
 
 ```bash
 npm test
