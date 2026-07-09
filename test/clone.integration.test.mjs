@@ -32,6 +32,20 @@ maybe("cloneSite produces a self-contained dist with a closed module graph", asy
   assert.ok(html.includes("display:none!important"), "badge hidden");
 });
 
+maybe("cloneSite with an origin leaves no Framer CDN references except failed mirrors", async () => {
+  const out = await mkdtemp(path.join(tmpdir(), "fm-clone-"));
+  const res = await cloneSite({
+    framerUrl: TEST_URL,
+    outDir: out,
+    origin: "https://example.pages.dev",
+    build: { keepCdn: false, keepTracking: false, keepBadge: false },
+  });
+  const html = await readFile(path.join(out, "index.html"), "utf8");
+  const refs = [...html.matchAll(/https:\/\/(?:framerusercontent\.com|app\.framerstatic\.com|framer\.com\/m)\/[^"'`)\s\\]*/g)];
+  assert.ok(refs.length <= res.failedAssets.length, `unexpected CDN refs: ${refs.slice(0, 3)}`);
+  assert.ok(existsSync(path.join(out, "_headers")), "_headers for versioned js mirrors");
+});
+
 maybe("computeSourceHash returns a sha256 string", async () => {
   const h = await computeSourceHash(TEST_URL);
   assert.ok(h.startsWith("sha256:"));

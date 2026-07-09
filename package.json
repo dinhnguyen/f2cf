@@ -3,9 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "bin": { "f2cf": "./cli.mjs" },
+  "bin": {
+    "f2cf": "./cli.mjs"
+  },
   "scripts": {
     "test": "node --test",
     "start": "node server.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.61.1"
   }
 }

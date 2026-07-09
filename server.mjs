@@ -82,8 +82,9 @@ export function createServer(ctx) {
         }
         if (req.method === "POST" && parts[3] === "preview") {
           const reg = await load(ctx.regPath);
-          if (!getSite(reg, id)) return json(res, 404, { error: "no such site" });
-          const { url: purl } = await startPreview(id, ops.buildDir(ctx, id));
+          const site = getSite(reg, id);
+          if (!site) return json(res, 404, { error: "no such site" });
+          const { url: purl } = await startPreview(id, ops.buildDir(ctx, id), { origin: ops.siteOrigin(site) });
           return json(res, 200, { url: purl });
         }
         if (req.method === "DELETE" && parts.length === 3) {

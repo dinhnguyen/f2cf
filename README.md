@@ -141,11 +141,12 @@ Các tuỳ chọn thêm:
 | Cờ | Ý nghĩa |
 |----|---------|
 | `--out <thư mục>` | Nơi lưu kết quả (mặc định `dist`). |
-| `--keep-cdn` | Không tải ảnh trong HTML về, để load từ CDN Framer. |
-| `--keep-tracking` | Giữ mã theo dõi của Framer. |
+| `--origin <url>` | Địa chỉ site sẽ được deploy (ví dụ `https://tensite.pages.dev`). Có cờ này thì tải về **toàn bộ** font, ảnh, module, dữ liệu CMS - site không còn gọi về máy chủ Framer nữa. |
+| `--keep-cdn` | Không tải asset về, để load từ CDN Framer. |
+| `--keep-tracking` | Giữ mã theo dõi và thanh editor của Framer. |
 | `--keep-badge` | Giữ logo "Made in Framer". |
 
-Mặc định (không thêm cờ) là bản sạch: gỡ tracking, ẩn badge, tải ảnh trong HTML về.
+Mặc định (không thêm cờ) là bản sạch: gỡ tracking, ẩn badge, tải ảnh trong HTML về. Dashboard luôn dùng chế độ `--origin` (tự lấy địa chỉ `*.pages.dev` của project) nên site tải qua dashboard là bản tách hoàn toàn khỏi Framer.
 
 ---
 
@@ -168,7 +169,9 @@ node seed.mjs
 
 ## 7. Điều quan trọng cần biết
 
-- **Không thể tách hoàn toàn khỏi Framer.** Site Framer vẫn tải font và dữ liệu CMS từ máy chủ của Framer (`framerusercontent.com`). Đây là giới hạn kỹ thuật: nếu ép mọi thứ về máy sẽ làm site bị lỗi (trắng trang phần động). Ảnh trong trang thì được tải về Cloudflare.
+- **Site được tách hoàn toàn khỏi hạ tầng Framer.** Font, ảnh, module JS, icon và dữ liệu CMS đều được tải về và phục vụ từ Cloudflare; thanh editor của Framer (vốn gọi về `framer.com` với mọi khách truy cập) bị vô hiệu. Còn lại trên máy chủ ngoài chỉ có Google Fonts (giữ nguyên vì CDN Google nhanh) và các embed bên thứ ba như Google Maps, YouTube - những thứ này là dịch vụ chạy trực tiếp, không tải về được.
+- **Ảnh phục vụ ở kích thước gốc.** CDN Framer có tính năng resize ảnh theo tham số (`?width=...`); bản tự host trả đúng file gốc cho mọi kích thước nên trang có thể nặng hơn chút trên màn hình nhỏ.
+- **Cần cài `playwright`** (đã nằm trong `package.json`, `npm install` là đủ) để bước dò quét tự động tìm các file mà site chỉ nạp lúc chạy (icon, dữ liệu CMS). Thiếu nó công cụ vẫn chạy nhưng vài icon/section động có thể bị thiếu.
 - **Mỗi lần chỉ tải một trang** - đúng trang ở địa chỉ bạn đưa. Chưa tự đi theo các trang con.
 - **Một chiều Framer -> máy.** Đừng sửa file đã tải về; sửa trên Framer rồi Sync lại.
 - Công cụ chỉ chạy nội bộ (`127.0.0.1`), người ngoài mạng không vào được dashboard của bạn.
