@@ -7,6 +7,7 @@ import * as ops from "./lib/ops.mjs";
 import { whoami } from "./lib/cloudflare.mjs";
 import { startPreview } from "./lib/preview.mjs";
 import { load, getSite } from "./lib/registry.mjs";
+import { parseRepo } from "./lib/github.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css" };
@@ -20,7 +21,12 @@ export function createServer(ctx) {
   };
   async function runOp(id, kind, fn) {
     const cur = opState.get(id);
-    if (cur?.running) throw new Error(`"${id}" is busy (${cur.kind})`);
+    if (cur?.running) {
+      // Callers swallow this rejection, so the stream is the only place the user can see it.
+      // Not [error]: that marker ends the stream client-side, and the running op still owns it.
+      emit(id, `[busy] "${id}" is busy (${cur.kind})`);
+      throw new Error(`"${id}" is busy (${cur.kind})`);
+    }
     opState.set(id, { running: true, kind, error: "" });
     try {
       const result = await fn((line) => emit(id, line));
@@ -64,10 +70,26 @@ export function createServer(ctx) {
           try { body = await readBody(req); }
           catch { return json(res, 400, { error: "invalid JSON body" }); }
           if (!body.framerUrl) return json(res, 400, { error: "framerUrl required" });
+          if (body.githubRepo) {
+            try { parseRepo(body.githubRepo); }
+            catch (e) { return json(res, 400, { error: e.message }); }
+          }
           runOp("new:" + body.framerUrl, "clone", (log) => ops.runClone(body, ctx, log)).catch(() => {});
           return json(res, 202, { started: true });
         }
         const id = parts[2] ? decodeURIComponent(parts[2]) : parts[2];
+        if (req.method === "PATCH" && parts.length === 3) {
+          let body;
+          try { body = await readBody(req); }
+          catch { return json(res, 400, { error: "invalid JSON body" }); }
+          const reg2 = await load(ctx.regPath);
+          if (!getSite(reg2, id)) return json(res, 404, { error: "no such site" });
+          try {
+            if (body.cloudflareProject !== undefined) return json(res, 200, await ops.setCloudflareProject(id, body.cloudflareProject, ctx));
+            return json(res, 200, await ops.setGithubRepo(id, body.githubRepo || "", ctx));
+          }
+          catch (e) { return json(res, 400, { error: e.message }); }
+        }
         if (req.method === "POST" && parts[3] === "sync") {
           runOp(id, "sync", (log) => ops.runSync(id, ctx, log)).catch(() => {});
           return json(res, 202, { started: true });
@@ -75,6 +97,10 @@ export function createServer(ctx) {
         if (req.method === "POST" && parts[3] === "check") {
           try { return json(res, 200, await ops.runCheck(id, ctx)); }
           catch (e) { return json(res, 400, { error: e.message }); }
+        }
+        if (req.method === "POST" && parts[3] === "push") {
+          runOp(id, "push", (log) => ops.runPushGithub(id, ctx, log)).catch(() => {});
+          return json(res, 202, { started: true });
         }
         if (req.method === "POST" && parts[3] === "publish") {
           runOp(id, "publish", (log) => ops.runPublish(id, ctx, log)).catch(() => {});

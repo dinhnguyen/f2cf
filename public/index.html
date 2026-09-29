@@ -4,23 +4,72 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>F2CF - Framer to Cloudflare</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..125,400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
-  <header>
-    <h1>F2CF <span style="font-weight:400;font-size:13px;opacity:.55">Framer to Cloudflare</span></h1>
-    <div id="auth" class="auth">…</div>
-  </header>
-  <section class="add">
-    <input id="framerUrl" placeholder="https://tensite.framer.website/">
-    <input id="projectName" placeholder="cloudflare project (tùy chọn)">
-    <button id="addBtn">+ Thêm site</button>
-  </section>
-  <table id="sites">
-    <thead><tr><th>Site</th><th>Trạng thái</th><th>Sync</th><th>Publish</th><th>Hành động</th></tr></thead>
-    <tbody></tbody>
-  </table>
-  <pre id="log" class="log" hidden></pre>
+  <div id="bar" class="bar"></div>
+  <div class="deck">
+    <header>
+      <div class="mark">
+        <h1>F2CF</h1>
+        <p class="tag">framer to cloudflare</p>
+      </div>
+      <div class="head-right">
+        <div id="auth" class="auth">đang kiểm tra</div>
+        <button id="openAdd">+ site mới</button>
+      </div>
+    </header>
+
+    <table id="sites">
+      <colgroup>
+        <col class="c-site"><col class="c-state"><col class="c-time"><col class="c-time"><col class="c-repo"><col class="c-act">
+      </colgroup>
+      <thead>
+        <tr>
+          <th>Site</th><th>Trạng thái</th><th>Sync</th><th>Publish</th><th>GitHub</th><th>Hành động</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <section class="console">
+      <div class="console-head">
+        <p class="strip-label">console</p>
+        <div class="console-acts">
+          <button class="link" id="clearLog">xoá</button>
+          <button class="link" id="closeLog">đóng</button>
+        </div>
+      </div>
+      <pre id="log" class="log" hidden></pre>
+    </section>
+  </div>
+
+  <dialog id="addDlg" class="dlg">
+    <form id="addForm">
+      <p class="strip-label">site mới</p>
+      <label class="field">
+        <span>framer url</span>
+        <input id="framerUrl" placeholder="tensite.framer.website" required>
+      </label>
+      <label class="field">
+        <span>cloudflare project</span>
+        <input id="projectName" placeholder="tùy chọn - mặc định lấy theo tên site">
+      </label>
+      <label class="field">
+        <span>github repo</span>
+        <input id="githubRepo" placeholder="tùy chọn - owner/name">
+      </label>
+      <p id="addErr" class="dlg-err" hidden></p>
+      <div class="dlg-actions">
+        <button type="button" id="cancelAdd" class="ghost-btn">huỷ</button>
+        <button type="submit" id="addBtn">thêm site</button>
+      </div>
+    </form>
+  </dialog>
+
   <script src="/app.js" type="module"></script>
 </body>
 </html>

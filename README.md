@@ -146,6 +146,7 @@ Options:
 | `--origin <url>` | The address the site will be deployed at (e.g. `https://yoursite.pages.dev`). With this flag, **everything** is downloaded - fonts, images, modules, CMS data - and the site no longer calls Framer's servers. |
 | `--keep-cdn` | Do not download assets; keep loading them from Framer's CDN. |
 | `--keep-tracking` | Keep Framer's tracking code and editor bar. |
+| `--portable` | Build a standalone copy that runs on any static host at a domain root (nginx, S3, Netlify, GitHub Pages). All assets are downloaded into `resources/` and referenced by root-relative paths, and ES modules are mirrored under a `.js` extension so hosts that do not know `.mjs` still serve them as script. Cannot be combined with `--origin`. |
 | `--keep-badge` | Keep the "Made in Framer" badge. |
 
 The default (no flags) is a clean build: tracking removed, badge hidden, HTML-referenced images downloaded. The dashboard always uses `--origin` mode (it derives the project's `*.pages.dev` address), so sites cloned through the dashboard are fully detached from Framer.
@@ -172,9 +173,12 @@ node seed.mjs
 ## 7. Important things to know
 
 - **Sites are fully detached from Framer's infrastructure.** Fonts, images, JS modules, icons and CMS data are all downloaded and served from Cloudflare; Framer's editor bar (which pings `framer.com` for every visitor) is disabled. The only remaining external servers are Google Fonts (kept on purpose - Google's CDN is fast) and third-party embeds such as Google Maps or YouTube - those are live services and cannot be downloaded.
+- **CMS images are the one exception.** Framer's `.framercms` collection files are a binary format: records carry byte-length prefixes and the runtime reads slices by offset, so rewriting URLs inside them corrupts the file. They are mirrored byte-for-byte, which leaves the article thumbnail URLs stored inside them pointing at `framerusercontent.com`. Pages loaded directly are unaffected - only content rendered after a client-side navigation into a CMS list pulls those images from Framer.
+- **A small shim is injected into every self-hosted page.** Framer requests CMS slices as `file.framercms?range=from-to`, a convention only its own CDN implements, and it insists on a `200` whose body is exactly the requested bytes. The shim fetches the file and slices it in the browser, so no host support is required. Portable builds get a second shim that lets root-relative paths work as a `new URL(url, base)` base.
 - **Images are served at original size.** Framer's CDN resizes images via query parameters (`?width=...`); the self-hosted copy returns the original file for every size, so pages can be slightly heavier on small screens.
 - **`playwright` is required** (already in `package.json`; `npm install` is enough) for the discovery step that finds files the site only loads at runtime (icons, CMS data). Without it the tool still works, but some icons/dynamic sections may be missing.
-- **One page per clone** - exactly the page at the address you give. It does not follow subpages yet.
+- **Every route is cloned.** The route list comes from the site's `sitemap.xml`, and each route is written as its own document (`/tin-tuc` -> `tin-tuc/index.html`, `/404` -> `404.html`), so subpages keep their own title, meta tags and CMS content. If `sitemap.xml` is unavailable, only the entry page is cloned.
+- **Update checks only look at the entry page.** A change confined to a subpage (a new article, an edited job post) does not flip the sync hash, so run Sync manually after editing CMS content in Framer.
 - **One-way Framer -> machine.** Do not edit downloaded files; edit in Framer and Sync again.
 - The tool binds to `127.0.0.1` only; nobody outside your machine can reach your dashboard.
 

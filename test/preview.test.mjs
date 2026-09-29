@@ -52,3 +52,57 @@ test("404s missing files, blocks traversal, and survives malformed URLs", async 
   assert.match(await (await fetch(url)).text(), /hi/);
   stopAll();
 });
+
+test("preview resolves clean subpage urls to their directory index, like a static host", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "fm-prev-"));
+  await writeFile(path.join(dir, "index.html"), "<h1>home</h1>");
+  await mkdir(path.join(dir, "tin-tuc/bài-viết"), { recursive: true });
+  await writeFile(path.join(dir, "tin-tuc/index.html"), "<h1>list</h1>");
+  await writeFile(path.join(dir, "tin-tuc/bài-viết/index.html"), "<h1>article</h1>");
+  await writeFile(path.join(dir, "404.html"), "<h1>missing</h1>");
+  const { url } = await startPreview("s4", dir);
+
+  assert.match(await (await fetch(url + "tin-tuc")).text(), /list/, "extensionless route");
+  assert.match(await (await fetch(url + "tin-tuc/")).text(), /list/, "trailing slash");
+  assert.match(await (await fetch(url + "tin-tuc/b%C3%A0i-vi%E1%BA%BFt")).text(), /article/, "encoded slug");
+
+  const missing = await fetch(url + "khong-co-trang-nay");
+  assert.equal(missing.status, 404);
+  assert.match(await missing.text(), /missing/, "serves 404.html as the not-found body");
+  stopAll();
+});
+
+test("preview answers range requests, as media playback needs to seek within mp4 files", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "fm-prev-"));
+  await writeFile(path.join(dir, "data.framercms"), "0123456789");
+  const { url } = await startPreview("s5", dir);
+
+  const part = await fetch(url + "data.framercms", { headers: { range: "bytes=2-5" } });
+  assert.equal(part.status, 206);
+  assert.equal(await part.text(), "2345");
+  assert.equal(part.headers.get("content-range"), "bytes 2-5/10");
+  assert.equal(part.headers.get("content-length"), "4");
+
+  const openEnded = await fetch(url + "data.framercms", { headers: { range: "bytes=7-" } });
+  assert.equal(await openEnded.text(), "789");
+
+  const whole = await fetch(url + "data.framercms");
+  assert.equal(whole.status, 200);
+  assert.equal(whole.headers.get("accept-ranges"), "bytes");
+  assert.equal(await whole.text(), "0123456789");
+  stopAll();
+});
+
+test("preview serves .framercms untouched - the origin swap would corrupt a binary format", async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), "fm-prev-"));
+  const origin = "https://site.pages.dev";
+  const body = Buffer.from(`\x00\x00\x00{"a":1}${origin}/framerusercontent.com/images/a.png\x00\xff`, "binary");
+  await writeFile(path.join(dir, "x-indexes-default-0.framercms"), body);
+  const { url } = await startPreview("s6", dir, { origin });
+
+  const res = await fetch(url + "x-indexes-default-0.framercms");
+  const served = Buffer.from(await res.arrayBuffer());
+  assert.equal(served.length, body.length, "byte length must survive - offsets depend on it");
+  assert.ok(served.equals(body), "bytes must be identical");
+  stopAll();
+});

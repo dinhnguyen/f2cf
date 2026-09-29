@@ -146,6 +146,7 @@ Các tuỳ chọn thêm:
 | `--origin <url>` | Địa chỉ site sẽ được deploy (ví dụ `https://tensite.pages.dev`). Có cờ này thì tải về **toàn bộ** font, ảnh, module, dữ liệu CMS - site không còn gọi về máy chủ Framer nữa. |
 | `--keep-cdn` | Không tải asset về, để load từ CDN Framer. |
 | `--keep-tracking` | Giữ mã theo dõi và thanh editor của Framer. |
+| `--portable` | Tạo bản độc lập chạy được trên mọi static host đặt ở gốc tên miền (nginx, S3, Netlify, GitHub Pages). Mọi asset tải về nằm trong `resources/` và tham chiếu bằng đường dẫn từ gốc, module ES lưu kèm đuôi `.js` để host không biết `.mjs` vẫn phục vụ đúng kiểu script. Không dùng chung với `--origin`. |
 | `--keep-badge` | Giữ logo "Made in Framer". |
 
 Mặc định (không thêm cờ) là bản sạch: gỡ tracking, ẩn badge, tải ảnh trong HTML về. Dashboard luôn dùng chế độ `--origin` (tự lấy địa chỉ `*.pages.dev` của project) nên site tải qua dashboard là bản tách hoàn toàn khỏi Framer.
@@ -172,9 +173,12 @@ node seed.mjs
 ## 7. Điều quan trọng cần biết
 
 - **Site được tách hoàn toàn khỏi hạ tầng Framer.** Font, ảnh, module JS, icon và dữ liệu CMS đều được tải về và phục vụ từ Cloudflare; thanh editor của Framer (vốn gọi về `framer.com` với mọi khách truy cập) bị vô hiệu. Còn lại trên máy chủ ngoài chỉ có Google Fonts (giữ nguyên vì CDN Google nhanh) và các embed bên thứ ba như Google Maps, YouTube - những thứ này là dịch vụ chạy trực tiếp, không tải về được.
+- **Ảnh trong CMS là ngoại lệ duy nhất.** File collection `.framercms` của Framer là định dạng nhị phân: mỗi bản ghi có prefix độ dài và runtime đọc từng lát theo offset, nên rewrite URL bên trong sẽ làm hỏng file. Chúng được sao chép nguyên xi từng byte, đổi lại URL ảnh thumbnail nằm trong đó vẫn trỏ về `framerusercontent.com`. Trang load trực tiếp không bị ảnh hưởng - chỉ nội dung render sau khi điều hướng client-side vào trang danh sách CMS mới lấy ảnh từ Framer.
+- **Mỗi trang self-host được chèn một shim nhỏ.** Framer xin lát dữ liệu CMS bằng `file.framercms?range=from-to`, quy ước chỉ CDN của họ hiểu, và bắt buộc phải nhận `200` với body đúng bằng số byte đã xin. Shim tải file rồi cắt ngay trong trình duyệt nên không đòi hỏi gì ở host. Bản portable có thêm shim thứ hai để đường dẫn từ gốc dùng được làm base cho `new URL(url, base)`.
 - **Ảnh phục vụ ở kích thước gốc.** CDN Framer có tính năng resize ảnh theo tham số (`?width=...`); bản tự host trả đúng file gốc cho mọi kích thước nên trang có thể nặng hơn chút trên màn hình nhỏ.
 - **Cần cài `playwright`** (đã nằm trong `package.json`, `npm install` là đủ) để bước dò quét tự động tìm các file mà site chỉ nạp lúc chạy (icon, dữ liệu CMS). Thiếu nó công cụ vẫn chạy nhưng vài icon/section động có thể bị thiếu.
-- **Mỗi lần chỉ tải một trang** - đúng trang ở địa chỉ bạn đưa. Chưa tự đi theo các trang con.
+- **Tải toàn bộ route.** Danh sách route lấy từ `sitemap.xml` của site, mỗi route ghi thành một file riêng (`/tin-tuc` -> `tin-tuc/index.html`, `/404` -> `404.html`), nên trang con giữ đúng title, thẻ meta và nội dung CMS của nó. Nếu không đọc được `sitemap.xml` thì chỉ tải trang vào.
+- **Kiểm tra cập nhật chỉ nhìn trang vào.** Thay đổi nằm gọn trong trang con (thêm bài viết, sửa tin tuyển dụng) không làm đổi hash đồng bộ, nên sau khi sửa nội dung CMS trên Framer hãy bấm Sync thủ công.
 - **Một chiều Framer -> máy.** Đừng sửa file đã tải về; sửa trên Framer rồi Sync lại.
 - Công cụ chỉ chạy nội bộ (`127.0.0.1`), người ngoài mạng không vào được dashboard của bạn.
 

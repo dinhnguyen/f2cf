@@ -25,6 +25,15 @@ test("whoami handles a dotted email local-part", async () => {
   assert.equal(who.email, "first.last@company.com");
 });
 
+test("whoami accepts an account API token, which reports no email", async () => {
+  const runner = runnerFor({
+    "whoami": { status: 0, stdout: "👋 You are logged in with an Account API Token, associated with the account Acme Co's Account.\n│ Acme Co's Account │ 401fc117d3f628de9c91082a52beacbc │\n", stderr: "" },
+  });
+  const who = await whoami(runner);
+  assert.equal(who.email, "");
+  assert.equal(who.account, "Acme Co's Account");
+});
+
 test("whoami throws when not authenticated even if wrangler exits 0", async () => {
   const runner = runnerFor({ "whoami": { status: 0, stdout: "You are not authenticated. Please run `wrangler login`.\n", stderr: "" } });
   await assert.rejects(() => whoami(runner), /auth|login/i);

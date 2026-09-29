@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import {
   extractImports, stripExternalScripts, hideBadge, hashSource, fetchBuf,
   isLocalizableAsset, isMirrorableAsset, isRewritableText, rewriteToOrigin,
-  stubEditorBar, EDITOR_STUB_PATH,
+  stubEditorBar, EDITOR_STUB_PATH, extractCmsUrls, injectUrlShim, URL_SHIM_MARKER,
+  injectRangeShim, RANGE_SHIM_MARKER,
 } from "../lib/framer.mjs";
 
 test("isLocalizableAsset localizes static resources but leaves module/CMS base URLs (new URL bases) alone", () => {
@@ -32,13 +33,19 @@ test("isMirrorableAsset also covers runtime modules and CMS/search data, but not
   assert.equal(isMirrorableAsset("/m/phosphor-icons/"), false);
 });
 
-test("isRewritableText matches js/css/json/framercms and versioned module mirrors", () => {
-  for (const p of ["a/b.mjs", "a/b.js", "a/b.css", "a/searchIndex.json", "a/x.framercms", "a/Key.js@0.0.53"]) {
+test("isRewritableText matches js/css/json and versioned module mirrors", () => {
+  for (const p of ["a/b.mjs", "a/b.js", "a/b.css", "a/searchIndex.json", "a/Key.js@0.0.53"]) {
     assert.equal(isRewritableText(p), true, p);
   }
   for (const p of ["a/b.png", "a/b.woff2", "index.html"]) {
     assert.equal(isRewritableText(p), false, p);
   }
+});
+
+test("isRewritableText leaves .framercms alone - it is binary and read by byte offset", () => {
+  // records are length-prefixed and the runtime fetches slices with Range headers, so
+  // any substitution shifts every offset and the page dies on "Unexpected response length"
+  assert.equal(isRewritableText("a/x-indexes-default-0.framercms"), false);
 });
 
 test("rewriteToOrigin rewrites CDN urls in any quoting context and skips failed mirrors", () => {
@@ -122,4 +129,59 @@ test("fetchBuf does not retry a permanent 404", async () => {
     globalThis.fetch = orig;
   }
   assert.equal(calls, 1, "permanent error must not be retried");
+});
+
+test("rewriteToOrigin with an empty origin produces root-relative urls for host-anywhere exports", () => {
+  const input = '<img src="https://framerusercontent.com/images/a.png?width=230">\n' +
+                'import("https://app.framerstatic.com/chunk-A.mjs")';
+  const out = rewriteToOrigin(input, "");
+  assert.ok(out.includes('src="/framerusercontent.com/images/a.png?width=230"'), "html attr");
+  assert.ok(out.includes('"/app.framerstatic.com/chunk-A.mjs"'), "module url");
+  assert.ok(!out.includes("https://framerusercontent.com"), "no CDN refs left");
+});
+
+test("rewriteToOrigin applies a local-path mapper so mirrors can be renamed and refoldered", () => {
+  const input = 'import("https://framerusercontent.com/sites/ID/main.AbC.mjs?v=1")';
+  const out = rewriteToOrigin(input, "", new Set(), (host, p) => "/resources" + p + ".js");
+  assert.ok(out.includes("/resources/sites/ID/main.AbC.mjs.js?v=1"), out);
+});
+
+test("extractCmsUrls resolves the CMS data files Framer builds from a relative name and a base literal", () => {
+  const base = "https://framerusercontent.com/modules/AA/BB/W3vHeWcR5.js";
+  const js =
+    "chunks:[new URL(`./W3vHeWcR5-chunk-default-0.framercms`,`" + base + "`).href.replace(`/modules/`,`/cms/`)]," +
+    "url:new URL(`./W3vHeWcR5-indexes-default-0.framercms`,`" + base + "`).href.replace(`/modules/`,`/cms/`)," +
+    'plain:new URL("./sibling.framercms","' + base + '")';
+  const urls = extractCmsUrls(js);
+  assert.deepEqual(urls.sort(), [
+    "https://framerusercontent.com/cms/AA/BB/W3vHeWcR5-chunk-default-0.framercms",
+    "https://framerusercontent.com/cms/AA/BB/W3vHeWcR5-indexes-default-0.framercms",
+    "https://framerusercontent.com/modules/AA/BB/sibling.framercms",
+  ].sort());
+});
+
+test("extractCmsUrls ignores non-CMS relative imports and non-Framer bases", () => {
+  assert.deepEqual(extractCmsUrls("new URL(`./chunk.mjs`,`https://framerusercontent.com/modules/A/x.js`)"), []);
+  assert.deepEqual(extractCmsUrls("new URL(`./a.framercms`,`https://evil.example.com/modules/A/x.js`)"), []);
+});
+
+test("injectUrlShim runs before any script and keeps the charset meta first", () => {
+  const html = '<html><head>\n\t<meta charset="utf-8">\n<title>x</title>\n<script type="module" src="/a.js"></script></head><body></body></html>';
+  const out = injectUrlShim(html);
+  assert.ok(out.indexOf('<meta charset="utf-8">') < out.indexOf(URL_SHIM_MARKER), "charset stays first");
+  assert.ok(out.indexOf(URL_SHIM_MARKER) < out.indexOf('type="module"'), "shim runs before module scripts");
+});
+
+test("injectUrlShim is idempotent and still works without a charset meta", () => {
+  const once = injectUrlShim("<html><head><title>x</title></head><body></body></html>");
+  assert.ok(once.includes(URL_SHIM_MARKER));
+  assert.equal(injectUrlShim(once), once, "re-injecting changes nothing");
+});
+
+test("injectRangeShim runs before the bundle and is idempotent", () => {
+  const html = '<html><head><meta charset="utf-8"><script type="module" src="/a.js"></script></head><body></body></html>';
+  const out = injectRangeShim(html);
+  assert.ok(out.indexOf('<meta charset="utf-8">') < out.indexOf(RANGE_SHIM_MARKER), "charset stays first");
+  assert.ok(out.indexOf(RANGE_SHIM_MARKER) < out.indexOf('type="module"'), "shim runs before module scripts");
+  assert.equal(injectRangeShim(out), out, "re-injecting changes nothing");
 });
